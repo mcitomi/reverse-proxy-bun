@@ -7,8 +7,8 @@
     "moduleDetection": "force",
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "composite": true,
     "strict": true,
+    "strictPropertyInitialization": false,
     "downlevelIteration": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
@@ -17,6 +17,6 @@
     "allowJs": true,
     "types": [
       "bun-types" // add Bun global
-    ]
+    ],
   }
 }
