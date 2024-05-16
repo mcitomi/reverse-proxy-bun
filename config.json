@@ -1,4 +1,5 @@
 {
-    "port" : 8080,
+    "proxyPort" : 8080,
+    "adminPort" : 8081,
     "proxyUpdateKey": "F&k7hEDyVpC_;+!#}82?U/$jAXTwunz]}GNb`QgMH4@]ÄJqR3e"
 }

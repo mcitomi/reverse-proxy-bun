@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import httpProxy from "http-proxy";
-import { port, proxyUpdateKey } from "./config.json";
+import { createServer, IncomingMessage, ServerResponse } from "http";
+import { adminPort, proxyPort, proxyUpdateKey } from "./config.json";
 import type { ProxyMap, ProxyAddEventKeys } from "./types";
 
 const proxy: httpProxy = httpProxy.createProxyServer();
@@ -12,28 +13,33 @@ db.run("CREATE TABLE IF NOT EXISTS roots (host TEXT, hostUrl TEXT, target TEXT)"
 
 Bun.serve({
     // development: true,
-    port: port,
+    port: adminPort,
     fetch(r: Request): Response | Promise<Response> {
-        const requestPath: string = new URL(r.url).pathname;
-
-        switch (requestPath) {
-            case "/manageProxies":
-                return manageProxy(r);
-
-            default:
-                return handleRequest(r, requestPath);
-        }
+        return manageProxy(r);
     }
 });
 
-async function handleRequest(req: Request, path: string) {
-    const requested : ProxyMap | undefined = proxyMap.find(x => x.host == req.headers.get("host") && (path.length > 1 ? (x.hostUrl?.startsWith("/") ? x.hostUrl : "/" + x.hostUrl) == path : x.hostUrl == null));
+createServer((req: IncomingMessage, res: ServerResponse) => {
+    handleRequest(req, res, String(req.url));
+}).listen(proxyPort);
+
+async function handleRequest(req: IncomingMessage, res: ServerResponse, path: string) {
+    console.log(path);
+    
+    // const requested : ProxyMap | undefined = proxyMap.find(x => x.host == req.headers.host && (path.length > 1 ? (x.hostUrl?.startsWith("/") ? x.hostUrl : "/" + x.hostUrl) == path : x.hostUrl == null));
+    const requested : ProxyMap | undefined = proxyMap.find(x => x.host == req.headers.host && (x.hostUrl !== null ? x.hostUrl == path.slice(0, x.hostUrl.length) : true));
+
+    console.log(requested);
     
     if(!requested) {
-        return new Response("Root not found!", {status: 404});
+        res.writeHead(404, {'Content-Type': 'text/plain'});
+        res.write('Root not found!');
+        res.end();
     } else {
+        if(requested.hostUrl){
+            req.url = path.slice(requested.hostUrl.length);
+        }
         proxy.web(req, res, {target: requested.target});
-        return;
     }
 }
 
@@ -82,5 +88,20 @@ function loadProxyMap() {
 
 loadProxyMap();
 
+console.log(`Bun TS proxy server starts on port ${proxyPort}`);
 
-console.log(`Bun TS proxy server starts on port ${port}`);
+process.on("uncaughtException", (err: unknown) => {
+    console.log(err);
+});
+  
+process.on("unhandledRejection", (err: unknown) => {
+    console.log(err);
+});
+  
+process.on("uncaughtExceptionMonitor", (err: unknown) => {
+    console.log(err);
+});
+  
+process.on("warning", (err: unknown) => {
+    console.log(err);
+});
