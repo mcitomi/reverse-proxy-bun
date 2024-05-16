@@ -9,10 +9,9 @@ const db: Database = new Database("db.sqlite", { create: true });
 
 var proxyMap: ProxyMap[] = [];
 
-db.run("CREATE TABLE IF NOT EXISTS roots (host TEXT, hostUrl TEXT, target TEXT)");
+db.run("CREATE TABLE IF NOT EXISTS roots (host TEXT, hostUrl TEXT, target TEXT);");
 
 Bun.serve({
-    // development: true,
     port: adminPort,
     fetch(r: Request): Response | Promise<Response> {
         return manageProxy(r);
@@ -20,12 +19,11 @@ Bun.serve({
 });
 
 createServer((req: IncomingMessage, res: ServerResponse) => {
-    handleRequest(req, res, String(req.url));
+    handleRequest(req, res);
 }).listen(proxyPort);
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse, path: string) {
-    // const requested : ProxyMap | undefined = proxyMap.find(x => x.host == req.headers.host && (path.length > 1 ? (x.hostUrl?.startsWith("/") ? x.hostUrl : "/" + x.hostUrl) == path : x.hostUrl == null));
-    const requested : ProxyMap | undefined = proxyMap.find(x => x.host == req.headers.host && (x.hostUrl !== null ? x.hostUrl == path.slice(0, x.hostUrl.length) : true));
+async function handleRequest(req: IncomingMessage, res: ServerResponse) {
+    const requested : ProxyMap | undefined = proxyMap.find(x => x.host == req.headers.host && (x.hostUrl !== null ? x.hostUrl == req.url!.slice(0, x.hostUrl.length) : true));
     
     if(!requested) {
         res.writeHead(404, {'Content-Type': 'text/plain'});
@@ -33,7 +31,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, path: st
         res.end();
     } else {
         if(requested.hostUrl){
-            req.url = path.slice(requested.hostUrl.length);
+            req.url = req.url!.slice(requested.hostUrl.length);
         }
         try {
             proxy.web(req, res, {target: requested.target});
@@ -91,7 +89,7 @@ function loadProxyMap() {
 
 loadProxyMap();
 
-console.log(`Bun TS proxy server starts on port ${proxyPort}`);
+console.log(`Bun TS proxy server starts on port ${proxyPort}, admin port: ${adminPort}`);
 
 process.on("uncaughtException", (err: unknown) => {
     console.log(err);
