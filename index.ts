@@ -24,12 +24,8 @@ createServer((req: IncomingMessage, res: ServerResponse) => {
 }).listen(proxyPort);
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse, path: string) {
-    console.log(path);
-    
     // const requested : ProxyMap | undefined = proxyMap.find(x => x.host == req.headers.host && (path.length > 1 ? (x.hostUrl?.startsWith("/") ? x.hostUrl : "/" + x.hostUrl) == path : x.hostUrl == null));
     const requested : ProxyMap | undefined = proxyMap.find(x => x.host == req.headers.host && (x.hostUrl !== null ? x.hostUrl == path.slice(0, x.hostUrl.length) : true));
-
-    console.log(requested);
     
     if(!requested) {
         res.writeHead(404, {'Content-Type': 'text/plain'});
@@ -39,13 +35,20 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, path: st
         if(requested.hostUrl){
             req.url = path.slice(requested.hostUrl.length);
         }
-        proxy.web(req, res, {target: requested.target});
+        try {
+            proxy.web(req, res, {target: requested.target});
+            console.log(`[${new Date().toISOString().replace('T', ' ').split('.').shift()}] ${requested.host}${requested.hostUrl ? requested.hostUrl : ''} connected to => ${requested.target}`);
+        } catch (error: unknown) {
+            res.writeHead(500, {'Content-Type': 'text/plain'});
+            res.write('Proxy crashed!');
+            res.end();
+        }
     }
 }
 
 async function manageProxy(r: Request) {
     try {
-        const keys = await r.json() as (ProxyMap & ProxyAddEventKeys);
+        let keys = await r.json() as (ProxyMap & ProxyAddEventKeys);
 
         if (keys.pass !== proxyUpdateKey) {
             return new Response("mcitomi proxy error! this url not allowed / auth error");

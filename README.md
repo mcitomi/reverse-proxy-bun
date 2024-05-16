@@ -24,10 +24,11 @@ Példa post request raw body data:
 {
     "pass" : "password",
     "host" : "test.localhost:8080",
-    "hostUrl" : null,
-    "target" : "localhost:8888",
+    "hostUrl" : null, | "/page"
+    "target" : "http://localhost:8888",
     "action" : "add"
 }
 ```
-
 Actions: `add` `remove`
+
+!Fontos! hogy pontosan ilyen formátumban adjuk meg az adatokat. (target előtt http, host csak a domaint tartalmazza)
